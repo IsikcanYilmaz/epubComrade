@@ -3,11 +3,13 @@
 import traceback
 import argparse
 import sys
+import re
 from styles import *
 from common import *
 try:
     import requests
     from bs4 import BeautifulSoup
+    from bs4 import UnicodeDammit
     from ebooklib import epub
 except Exception as e:
     print(e)
@@ -40,8 +42,8 @@ def createBasicEpub(content, title="", author="epubcomrade"):
     if (title == ""):
         title = "title"
 
-    titleLower = title.lower().replace(" ", "_")
-    book.set_identifier(titleLower)
+    idString = re.sub('[^0-9a-zA-Z\ ]+', '', title.lower()).replace(" ", "_") # Remove all non-alphanumeric chars from filename
+    book.set_identifier(idString)
     book.set_title(title)
     book.set_language('en')
 
@@ -79,7 +81,7 @@ def createBasicEpub(content, title="", author="epubcomrade"):
     book.spine = [c1]
 
     # create epub file
-    filename = titleLower + '.epub'
+    filename = idString + '.epub'
     epub.write_epub(filename, book, {})
     print("[*] Written to", filename)
 
@@ -87,12 +89,29 @@ def miaParseAndPublish(url):
     soup = getHtml(url)
     body = soup.body
     info = soup.find(class_="information")
-    paragraphs = soup.find_all("p")
+    paragraphs = soup.find_all(re.compile('(h[1-6])|(p)')) # Find all headers (titles) and paragraphs
+    content = ""
+    title = soup.find("title")
+    if (title == None):
+        title = url
+        print('[!] Title not found. Going with URL as the title')
+    else:
+        title = title.text
+        print("[*] Title:", title)
+    for p in paragraphs:
+        if (p.name[0] != 'h' and p.name[0] != 'p'):
+            continue # TODO HACK This is due to the regex that finds all h and p tags. it catches unwanted tags
+        if ('class' in p.attrs and 'information' in p.attrs['class']):
+            content += '<hr class="division">' + "<p>" + p.text + "</p>" + '<hr class="division">'
+        else:
+            content += "<" + p.name + ">" + p.text + "</" + p.name + ">"
+    createBasicEpub(content, title=title)
+    return True
 
 def idomParseAndPublish(url):
     soup = getHtml(url)
     section = soup.find("section")
-    paragraphs = soup.find_all("p")
+    paragraphs = soup.find_all(re.compile('(h[1-6])|(p)'))
     title = soup.find(class_="article-title").text
     authorText = "IDOM"
 
@@ -129,13 +148,19 @@ def idomParseAndPublish(url):
     print("[*] Title:", title)
     print("[*] Author:", authorPerson)
     print("[*] Date published:", datePublished)
-    content = "<p>" + authorText + ", " + datePublished + "</p>"
+    content = "<p>" + authorText + ", " + datePublished + "</p>" + '<hr class="division">'
     for p in paragraphs:
-        content += "<p>" + p.text + "</p>"
+        if (p.name[0] != 'h' and p.name[0] != 'p'):
+            continue # TODO HACK This is due to the regex that finds all h and p tags. it catches unwanted tags
+        if ('class' in p.attrs and 'article-title' in p.attrs['class']):
+            continue # We already print the title ourselves. TODO, maybe how about not doing that? 
+        content += "<" + p.name + ">" + p.text + "</" + p.name + ">"
     createBasicEpub(content, title=title, author=authorText)
+    return True
 
 def help():
-    pass
+    print(INTRO_STR)
+    print(HELP_STR)
 
 ### MAIN FUNCTIONALITY ###
 
@@ -155,7 +180,11 @@ def main():
     print("[*] URL:", args.url)
     print('[*] Host:', host['host'])
     hostFn = host['fn']
-    hostFn(args.url)
+    ret = hostFn(args.url)
+    if (ret):
+        print('[*] Done!')
+    else:
+        print('[!] Error(s) happened during execution!')
     
 if __name__ == '__main__':
     main()
