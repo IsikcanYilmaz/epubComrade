@@ -93,7 +93,7 @@ def idomParseAndPublish(url):
 
     if (len(title) == 0):
         title = "Title"
-    print("[*] Title", title)
+    print("[*] Title:", title)
     content = ""
     for p in paragraphs:
         content += "<p>" + p.text + "</p>"
@@ -116,7 +116,8 @@ def main():
     if (host == None):
         print("[!] Couldnt find host")
         return
-    print("[*] URL:", args.url, "Host:", host['host'])
+    print("[*] URL:", args.url)
+    print('[*] Host:', host['host'])
     hostFn = host['fn']
     hostFn(args.url)
     
