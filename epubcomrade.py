@@ -111,7 +111,7 @@ def miaParseAndPublish(url):
 def idomParseAndPublish(url):
     soup = getHtml(url)
     section = soup.find("section")
-    paragraphs = soup.find_all(re.compile('(h[1-6])|(p)'))
+    paragraphs = section.find_all(re.compile('(h[1-6])|(p)'))
     title = soup.find(class_="article-title").text
     authorText = "IDOM"
 
