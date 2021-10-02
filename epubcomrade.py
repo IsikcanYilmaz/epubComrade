@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 
-import requests
 import traceback
 import argparse
+import sys
 from styles import *
-from bs4 import BeautifulSoup
-from ebooklib import epub
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    from ebooklib import epub
+except Exception as e:
+    print(e)
+    traceback.print_exc()
+    print("[!] Youll need the libraries: \"requests\", \"bs4\", \"EbookLib\". Get em from pip3!")
+    sys.exit(1)
 
 def getHtml(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
@@ -83,6 +90,27 @@ def idomParseAndPublish(url):
     section = soup.find("section")
     paragraphs = soup.find_all("p")
     title = soup.find(class_="article-title").text
+    authorText = "IDOM"
+
+    # Get article author
+    try:
+        authorPerson = soup.find(itemprop="author").text
+
+        # Strip trailing spaces
+        while authorPerson[0] == " ":
+            authorPerson = authorPerson[1:]
+        while (len(authorPerson) > 0 and authorPerson[-1] == " "):
+            authorPerson = authorPerson[:-1]
+        authorText += " - " + authorPerson
+    except AttributeError as e:
+        print('[!] Couldnt find author')
+    
+    # Get date published
+    datePublished = "-"
+    try:
+        datePublished = soup.find(itemprop="datePublished").text
+    except AttributeError as e:
+        print("[!] Couldnt find publish date")
 
     # Sometimes there are preceeding and trailing space characters in the title. remove em
     while(title[0] == " "):
@@ -93,11 +121,14 @@ def idomParseAndPublish(url):
 
     if (len(title) == 0):
         title = "Title"
+
     print("[*] Title:", title)
-    content = ""
+    print("[*] Author:", authorPerson)
+    print("[*] Date published:", datePublished)
+    content = "<p>" + authorText + ", " + datePublished + "</p>"
     for p in paragraphs:
         content += "<p>" + p.text + "</p>"
-    createBasicEpub(content, title=title, author="IDOM")
+    createBasicEpub(content, title=title, author=authorText)
 
 def help():
     pass
