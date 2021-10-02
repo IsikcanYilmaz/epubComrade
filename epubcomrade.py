@@ -4,6 +4,7 @@ import traceback
 import argparse
 import sys
 from styles import *
+from common import *
 try:
     import requests
     from bs4 import BeautifulSoup
@@ -142,6 +143,7 @@ knownUrls = {"marxist.com" : {"host":"IDOM", "fn":idomParseAndPublish},
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="URL to make a book out of")
+    print(INTRO_STR)
     args = parser.parse_args()
     host = checkUrlForKnownSources(args.url)
     if (host == None):
