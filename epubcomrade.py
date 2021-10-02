@@ -84,7 +84,10 @@ def createBasicEpub(content, title="", author="epubcomrade"):
     print("[*] Written to", filename)
 
 def miaParseAndPublish(url):
-    pass
+    soup = getHtml(url)
+    body = soup.body
+    info = soup.find(class_="information")
+    paragraphs = soup.find_all("p")
 
 def idomParseAndPublish(url):
     soup = getHtml(url)
