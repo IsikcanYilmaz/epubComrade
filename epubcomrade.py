@@ -17,6 +17,14 @@ except Exception as e:
     print("[!] Youll need the libraries: \"requests\", \"bs4\", \"EbookLib\". Get em from pip3!")
     sys.exit(1)
 
+def removeTrailingWhitespace(str):
+    cropped = str
+    while(cropped[0] == " " or cropped[0] == "\n"):
+        cropped = cropped[1:]
+    while((cropped[-1] == " " or cropped[-1] == "\n") and len(cropped) > 0):
+        cropped = cropped[:-1]
+    return cropped
+
 def getHtml(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
     try:
@@ -120,10 +128,7 @@ def idomParseAndPublish(url):
         authorPerson = soup.find(itemprop="author").text
 
         # Strip trailing spaces
-        while authorPerson[0] == " ":
-            authorPerson = authorPerson[1:]
-        while (len(authorPerson) > 0 and authorPerson[-1] == " "):
-            authorPerson = authorPerson[:-1]
+        authorPerson = authorPerson.strip()
         authorText += " - " + authorPerson
     except AttributeError as e:
         print('[!] Couldnt find author')
@@ -136,11 +141,7 @@ def idomParseAndPublish(url):
         print("[!] Couldnt find publish date")
 
     # Sometimes there are preceeding and trailing space characters in the title. remove em
-    while(title[0] == " "):
-        title = title[1:]
-
-    while(title[-1] == " " and len(title) > 0):
-        title = title[:-1]
+    title = title.strip()
 
     if (len(title) == 0):
         title = "Title"
@@ -158,6 +159,18 @@ def idomParseAndPublish(url):
     createBasicEpub(content, title=title, author=authorText)
     return True
 
+def socialistAppealParseAndPublish(url):
+    soup = getHtml(url)
+    title = soup.find(class_="article-title")
+    authorPerson = soup.find(itemprop="author")
+    abstract = soup.find(class_="metaintro")
+    content = soup.find(class_="article-content")
+    print(title.text.strip())
+    print(authorPerson.text.strip())
+    print(abstract.text.strip())
+    print(content.text.strip())
+    return True
+
 def help():
     print(INTRO_STR)
     print(HELP_STR)
@@ -165,7 +178,8 @@ def help():
 ### MAIN FUNCTIONALITY ###
 
 knownUrls = {"marxist.com" : {"host":"IDOM", "fn":idomParseAndPublish},
-             "marxists.org" :{"host":"MIA", "fn":miaParseAndPublish}
+             "marxists.org" :{"host":"MIA", "fn":miaParseAndPublish},
+             "socialist.net" : {"host":"SOCIALIST APPEAL", "fn":socialistAppealParseAndPublish}
             }
 
 def main():
