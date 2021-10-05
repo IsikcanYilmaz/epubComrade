@@ -17,6 +17,8 @@ except Exception as e:
     print("[!] Youll need the libraries: \"requests\", \"bs4\", \"EbookLib\". Get em from pip3!")
     sys.exit(1)
 
+SCRAPE_REGEX = '(h[1-6])|(p)|(ul)|(li)'
+
 def removeTrailingWhitespace(str):
     cropped = str
     while(cropped[0] == " " or cropped[0] == "\n"):
@@ -97,7 +99,7 @@ def miaParseAndPublish(url):
     soup = getHtml(url)
     body = soup.body
     info = soup.find(class_="information")
-    paragraphs = soup.find_all(re.compile('(h[1-6])|(p)')) # Find all headers (titles) and paragraphs
+    paragraphs = soup.find_all(re.compile(SCRAPE_REGEX)) # Find all headers (titles) and paragraphs
     content = ""
     title = soup.find("title")
     if (title == None):
@@ -107,8 +109,9 @@ def miaParseAndPublish(url):
         title = title.text
         print("[*] Title:", title)
     for p in paragraphs:
-        if (p.name[0] != 'h' and p.name[0] != 'p'):
-            continue # TODO HACK This is due to the regex that finds all h and p tags. it catches unwanted tags
+        # TODO HACK FIND BETTER REGEX TO FILTER BELOW OUT
+        if not (p.name == "p" or p.name[0] == "h" or p.name == "li"):
+            continue
         if ('class' in p.attrs and 'information' in p.attrs['class']):
             content += '<hr class="division">' + "<p>" + p.text + "</p>" + '<hr class="division">'
         else:
@@ -119,7 +122,7 @@ def miaParseAndPublish(url):
 def idomParseAndPublish(url):
     soup = getHtml(url)
     section = soup.find("section")
-    paragraphs = section.find_all(re.compile('(h[1-6])|(p)'))
+    paragraphs = section.find_all(re.compile(SCRAPE_REGEX))
     title = soup.find(class_="article-title").text
     authorText = "IDOM"
 
@@ -151,24 +154,55 @@ def idomParseAndPublish(url):
     print("[*] Date published:", datePublished)
     content = "<p>" + authorText + ", " + datePublished + "</p>" + '<hr class="division">'
     for p in paragraphs:
-        if (p.name[0] != 'h' and p.name[0] != 'p'):
-            continue # TODO HACK This is due to the regex that finds all h and p tags. it catches unwanted tags
+        # TODO HACK FIND BETTER REGEX TO FILTER BELOW OUT
+        if not (p.name == "p" or p.name[0] == "h" or p.name == "li"):
+            continue
         if ('class' in p.attrs and 'article-title' in p.attrs['class']):
             continue # We already print the title ourselves. TODO, maybe how about not doing that? 
         content += "<" + p.name + ">" + p.text + "</" + p.name + ">"
     createBasicEpub(content, title=title, author=authorText)
     return True
 
-def socialistAppealParseAndPublish(url):
+def socAppParseAndPublish(url):
     soup = getHtml(url)
     title = soup.find(class_="article-title")
+    if (title == None):
+        print('[!] No title found!')
+        titleText = url
+    else:
+        titleText = title.text.strip()
+
     authorPerson = soup.find(itemprop="author")
+    if (authorPerson == None):
+        print('[!] No authorPerson found!')
+        authorPersonText = "SOCIALIST APPEAL"
+    else:
+        authorPersonText = authorPerson.text.strip()
+
     abstract = soup.find(class_="metaintro")
-    content = soup.find(class_="article-content")
-    print(title.text.strip())
-    print(authorPerson.text.strip())
-    print(abstract.text.strip())
-    print(content.text.strip())
+    if (abstract == None):
+        print('[!] No abstract found!')
+        abstractText = ""
+    else:
+        abstractText = abstract.text.strip()
+
+    articleContent = soup.find(class_="article-content")
+    if (articleContent == None):
+        print('[!] No content found!')
+        return False
+    
+    print("[*] Title:", titleText)
+    print("[*] Author:", authorPersonText)
+
+    paragraphs = articleContent.find_all(re.compile(SCRAPE_REGEX))
+    
+    content = "<p>" + authorPersonText + "</p>" + '<hr class="division">'
+    for pEnum, p in enumerate(paragraphs):
+        # TODO HACK FIND BETTER REGEX TO FILTER BELOW OUT
+        if not (p.name == "p" or p.name[0] == "h" or p.name == "li"):
+            continue
+        content += "<" + p.name + ">" + p.text + "</" + p.name + ">"
+    createBasicEpub(content, title=titleText, author=authorPersonText)
     return True
 
 def help():
@@ -179,7 +213,7 @@ def help():
 
 knownUrls = {"marxist.com" : {"host":"IDOM", "fn":idomParseAndPublish},
              "marxists.org" :{"host":"MIA", "fn":miaParseAndPublish},
-             "socialist.net" : {"host":"SOCIALIST APPEAL", "fn":socialistAppealParseAndPublish}
+             "socialist.net" : {"host":"SOCIALIST APPEAL", "fn":socAppParseAndPublish}
             }
 
 def main():
